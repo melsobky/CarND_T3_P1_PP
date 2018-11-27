@@ -186,14 +186,7 @@ bool isSafeToShiftLane(vector<vector<double>> sensor_fusion,double car_d,double 
 		&& (current_s - car_s) <= 50)
 		{
 			safe = false;
-			if (side < 0)
-			{
-				printf("\nCar detected at left side!");
-			}
-			else
-			{
-				printf("\nCar detected at right side!");
-			}
+			break;
 		}
 	}
 	return safe;
