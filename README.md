@@ -19,7 +19,7 @@ Code compiles without errors with cmake and make. No changes were made to CMakeL
 
 ### The car is able to drive at least 4.32 miles without incident
 The image below shows the car at 5.15 miles without a single incident.
-![5.15 miles](images/miles.png)
+![5.15 miles](miles.png)
 ### The car drives according to the speed limit
 The car never exceeds the 50 mph speed limit. The speed drops when obstructed by traffic ahead, with no free lanes available to shift to.
 ### Max Acceleration and Jerk are not Exceeded
