@@ -10,6 +10,10 @@
 #include "json.hpp"
 #include "spline.h"
 
+
+#define LEFT -1
+#define RIGHT 1
+
 using namespace std;
 
 // for convenience
@@ -171,21 +175,38 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 
 }
 
-bool isSafeToShiftLane(vector<vector<double>> sensor_fusion,double car_d,double car_s,int side)
+bool isSafeToShiftLane(vector<vector<double>> sensor_fusion,double car_d,double car_s,int path_length,int side)
 {
-	double check_car_d = car_d + side*4;
+	double check_car_d_max = car_d + side*6;
+	double check_car_d_min = car_d + side*2;
 	bool safe = true;
 	
 	for(int i=0; i < sensor_fusion.size();i++)
 	{
-		float current_d = sensor_fusion[i][6];
-		float current_s = sensor_fusion[i][5];
+		double vx = sensor_fusion[i][3];
+		double vy = sensor_fusion[i][4];
+		double check_speed = sqrt(vx*vx+vy*vy);
+		double current_s = sensor_fusion[i][5];
+		double current_d = sensor_fusion[i][6];
 		
-		if(((current_d >= check_car_d && (current_d <= car_d - 2) && side < 0) 
-		|| (current_d <= check_car_d && (current_d >= car_d + 2) && side > 0))
-		&& (current_s - car_s) <= 50)
+		current_s+=((double)path_length*0.02*check_speed);
+		
+		if ((current_s - car_s <= 40) && (current_s - car_s >= -10))
 		{
-			safe = false;
+			if(abs(current_d - car_d) > 6)
+			{
+				continue;
+			}
+			
+			if((current_d >= check_car_d_max) && (current_d <= check_car_d_min) && (side == LEFT))
+			{
+				safe = false;
+			}
+			else if ((current_d <= check_car_d_max) && (current_d >= check_car_d_min) && (side == RIGHT))
+			{
+				safe = false;
+			}
+
 			break;
 		}
 	}
@@ -293,35 +314,36 @@ int main() {
 					double check_speed = sqrt(vx*vx+vy*vy);
 					double check_car_s = sensor_fusion[i][5];
 					
+	
 					check_car_s+=((double)prev_size*0.02*check_speed); //if using previous points can project s value out
 					//check s value greater than mine and s gap
-					if((check_car_s > car_s) && ((check_car_s-car_s) < 40))
+					if((check_car_s > car_s) && ((check_car_s-car_s) < 30))
 					{
-						//Do some logic here, lower reference velocity so we don't crash into the car infront of us
-						//clould also flag to try to change lanes.
-						//ref_vel = 29.5;
+						//lower reference velocity so we don't crash into the car infront of us
 						too_close = true;
+						
+						//flag to try to change lanes.
 						if (lane == 0)
 						{
-							if (isSafeToShiftLane(sensor_fusion,car_d,car_s,1))
+							if (isSafeToShiftLane(sensor_fusion,car_d,car_s,prev_size,RIGHT))
 							{
 								lane = 1;
 							}
 						}
 						else if(lane == 1)
 						{
-							if (isSafeToShiftLane(sensor_fusion,car_d,car_s,-1))
+							if (isSafeToShiftLane(sensor_fusion,car_d,car_s,prev_size,LEFT))
 							{
 								lane = 0;
 							}
-							else if (isSafeToShiftLane(sensor_fusion,car_d,car_s,1))
+							else if (isSafeToShiftLane(sensor_fusion,car_d,car_s,prev_size,RIGHT))
 							{
 								lane = 2;
 							}
 						}
 						else if (lane == 2)
 						{
-							if (isSafeToShiftLane(sensor_fusion,car_d,car_s,-1))
+							if (isSafeToShiftLane(sensor_fusion,car_d,car_s,prev_size,LEFT))
 							{
 								lane = 1;
 							}
@@ -332,11 +354,11 @@ int main() {
 			
 			if(too_close)
 			{
-				ref_vel -= 0.224;
+				ref_vel -= 0.336;
 			}
 			else if(ref_vel < 49.5)
 			{
-				ref_vel += 0.224;
+				ref_vel += 0.336;
 			}
 
           	// Create a list of widely spaced (x,y) waypoints, evenly spaced at 30m
